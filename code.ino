@@ -11,8 +11,6 @@ const int stepsPerRevolution = 2048;
 const byte sPin[] = {8, 9, 10, 11};
 int stepCount = 0;
 
-const char* pth = "POINTS.TXT";
-
 Stepper stepper(stepsPerRevolution, sPin[0], sPin[1], sPin[2], sPin[3]);
 
 
