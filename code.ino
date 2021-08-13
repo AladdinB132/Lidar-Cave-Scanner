@@ -26,19 +26,15 @@ void setup()
   stepper.setSpeed(5);
   
    //Initialise SD
-  if (SD.begin(53))
+  if (!SD.begin(53))
   {
-    Serial.println("Init epic");
-  }
-  else
-  {
-    Serial.println("Init not epic");
+    Serial.println("SD init failed");
   }
   file = SD.open("points.txt", FILE_WRITE);
   if(!file)
   {
-    Serial.println("Big yikes");
-    //while(1);
+    Serial.println("Failed opening points.txt");
+    while(1);
   }
   // Initialise Lidar
   lidar.begin(Serial2);
@@ -53,29 +49,25 @@ void loop() {
   {
     if (file)
     {
-      Serial.println("Writing...");
-      file.println(String(lidar.getCurrentPoint().distance) + " " + String(lidar.getCurrentPoint().angle) + " " +  String(stepCount) + " " + String(lidar.getCurrentPoint().quality));
+      file.println(String(lidar.getCurrentPoint().distance) + " " + String(lidar.getCurrentPoint().angle) + " " +  String((stepCount % 4096) / 4095.0 * 359.0) + " " + String(lidar.getCurrentPoint().quality));
       file.flush();
-      Serial.println("epicly wrote");
     }
     else
     {
-      Serial.println("SD not very epic");
+      Serial.println("Failed to write to points.txt");
     }
   }
   else
-  {    
+  {
     rplidar_response_device_info_t info;
     if (IS_OK(lidar.getDeviceInfo(info, 100)))
     {
        lidar.startScan();
-       Serial.println("panik");
        delay(1000);
-       Serial.println("kalm");
     }
     else
     {
-      Serial.println("eek");
+      Serial.println("Lidar has problem");
       delay(100);
     }
   }
