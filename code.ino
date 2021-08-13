@@ -4,113 +4,92 @@
 #include <Stepper.h>
 
 
-RPLidar lidar; // Objet lidar
-
-void WRITE();
-const int stepsPerRevolution = 2048;
-int stepCount = 0;  
-
-Stepper myStepper(stepsPerRevolution, 8, 9, 10, 11);
-
-// Fonctions du lidar
-
-// Lance la lecture du lidar, si la lecture échoue elle renvoie false
-bool lancerLecture() {
-  return IS_OK(lidar.waitPoint());
-}
-// fonction de la lecture de la distance
-float lectureDistance() {
-  return lidar.getCurrentPoint().distance;
-}
-// fonction de la lecture de l'angle du LiDAR
-float lectureAngleLidar() {
-  return lidar.getCurrentPoint().angle;
-}
-// fonction de la lecture de l'angle du moteur
-float lectureAngleMoteur() {
-  return rand();
-}
-// fonction de la lecture de la qualité des données 
-int lectureQualite() {
-  return lidar.getCurrentPoint().quality;
-}
-
+RPLidar lidar;
 int timer;
+File file;
+const int stepsPerRevolution = 2048;
+const byte sPin[] = {8, 9, 10, 11};
+int stepCount = 0;
 
-// fonction de lecture de toute les données 
-String lectureLidar();
-String lectureLidar() {
-  return String(lectureDistance()) + " " + String(lectureAngleLidar()) + " " + String(lectureAngleMoteur()) + " " + String(lectureQualite()) + "\n" ;
-}
+const char* pth = "POINTS.TXT";
 
-void setup() {
-  // Initialise le port série
-  myStepper.setSpeed(1);
-  Serial.begin(9600);
-  while (!Serial) {/*rien*/}
+Stepper stepper(stepsPerRevolution, sPin[0], sPin[1], sPin[2], sPin[3]);
 
-  // Initialise la carte SD
-  Serial.println("Initialisation de la carte SD...");
-  if (!SD.begin(53)) {
-    Serial.println("initialisation ratée!");
+
+void setup()
+{
+  Serial.begin(115200);
+  while (!Serial);
+
+    //Define file
+  
+  stepper.setSpeed(5);
+  
+   //Initialise SD
+  if (SD.begin(53))
+  {
+    Serial.println("Init epic");
   }
-  else {
-    Serial.println("initilisation finie.");
+  else
+  {
+    Serial.println("Init not epic");
   }
-
-  // Initialisation du Lidar
-  lidar.begin(Serial);
+  file = SD.open("points.txt", FILE_WRITE);
+  if(!file)
+  {
+    Serial.println("Big yikes");
+    //while(1);
+  }
+  // Initialise Lidar
+  lidar.begin(Serial2);
   lidar.startScan();
-
-  // Timer
+  // Timer used for stepper
   timer = millis();
 }
 
-// Fonction d'écriture
-void WRITE(){
-  // on ouvre le fichier POINTS.TXT 
-  File myFile = SD.open("POINTS.TXT", FILE_WRITE);
-  if (myFile) 
-  // on écrit dans le fichier les données
+void loop() {
+  //Main loop
+  if (IS_OK(lidar.waitPoint()))
   {
-    Serial.print("Writing to ");
-    Serial.println("POINTS.TXT");
-    myFile.print(lectureLidar());  
-    Serial.println("Done");
-    myFile.close();
+    if (file)
+    {
+      Serial.println("Writing...");
+      file.println(String(lidar.getCurrentPoint().distance) + " " + String(lidar.getCurrentPoint().angle) + " " +  String(stepCount) + " " + String(lidar.getCurrentPoint().quality));
+      file.flush();
+      Serial.println("epicly wrote");
+    }
+    else
+    {
+      Serial.println("SD not very epic");
+    }
   }
   else
-  // Si le fichier ne s'ouvre pas alors on affiche "erreur lors de l'ouverture du fichier"
-  {
-    Serial.println("erreur lors de l'ouverture du fichier");
+  {    
+    rplidar_response_device_info_t info;
+    if (IS_OK(lidar.getDeviceInfo(info, 100)))
+    {
+       lidar.startScan();
+       Serial.println("panik");
+       delay(1000);
+       Serial.println("kalm");
+    }
+    else
+    {
+      Serial.println("eek");
+      delay(100);
+    }
   }
-}
-
-void loop(){
-  //lance l'écriture si les données sont bien prises, sinon affiche "la lecture a échouée"
-  if (lancerLecture() == true) {
-    WRITE();
-    }
-  else {
-    Serial.println("La lecture a échouée");
-    }
-
-  if (timer + 1000 <= millis()) {
-    myStepper.step(-100);
-    Serial.print("steps:");
-    Serial.println(stepCount);
+  if (timer + 1000 <= millis())
+  {
+    stepper.step(-100);
     stepCount -= 100;
-
     timer = millis();
   }
 
-  if (stepCount == -1000) {
-    myStepper.setSpeed(5);
-    myStepper.step(-1000);
-
-    myStepper.setSpeed(5);
+  if (stepCount == -1000)
+  {
+    stepper.step(-1000);
     stepCount = 0;
   }
-  
 }
-// Made by Gaston, Benoit, and Maël 
+// Made by Arurikku.
